@@ -13,7 +13,7 @@ import matplotlib
 import experimentalsettings as ExperimentalSettings
 
 # Loading JSON with config file
-SETTINGS = ExperimentalSettings.ExperimentalSettings.load_json("MTL_ALPHA_LSTM_1FCs_DEPLOY_CLUSTER")
+SETTINGS = ExperimentalSettings.ExperimentalSettings.load_json("YOUR_JSON_FILE")
 
 # Setting log information
 logger = logging.getLogger(__name__)
@@ -106,6 +106,7 @@ def prepare_data(path_to_data, label_type, dataset_type):
             instance.label.insert(1, temp_labels[idx])  # note always adding synthetic right after NER
     return instances, x, temp_y
 
+
 # Load data
 train, train_x, train_y = prepare_data(SETTINGS['PATH_TRAIN'], SETTINGS["TAGGING_SCHEME_TRAIN"], 'TRAIN')
 dev, dev_x, dev_y = prepare_data(SETTINGS['PATH_DEV'], SETTINGS["TAGGING_SCHEME_DEV"], 'DEV')
@@ -119,7 +120,7 @@ if SETTINGS["TASK_NUMBER"] > 1:
     print(mi)
     utilities.LabelCoocurrencePlot(train_y, SETTINGS["TAGGING_SCHEME_TRAIN"], SETTINGS["TASK_NUMBER"], SETTINGS["PLOT_LABELCOOCURRENCE_PATH"])
 
-# Number of steps to unroll
+# # Number of steps to unroll
 seq_size = 2 * SETTINGS["CONTEXT_SIZE"] + 1
 
 # Loading test type
@@ -128,15 +129,14 @@ if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS":
     dim_y = len(SETTINGS["NUMBER_TOKENS"])
     VAR_TEST = SETTINGS["NUMBER_TOKENS"]
     xlabel = 'number_tokens'
-    n_tasks=SETTINGS["TASK_NUMBER"]
 elif SETTINGS["TEST_TYPE"] == "TASK_CORRELATION":
     dim_y = len(SETTINGS["ALPHA"])
     VAR_TEST = SETTINGS["ALPHA"]
     xlabel = 'alpha'
-    n_tasks = 2
+    end = SETTINGS[]
 elif SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-    dim_y = len(list(range(SETTINGS["TASK_NUMBER"])))
-    VAR_TEST = list(range(1, SETTINGS["TASK_NUMBER"] + 1))
+    dim_y = len(SETTINGS["TASK_NUMBER"])
+    VAR_TEST = SETTINGS["TASK_NUMBER"]
     xlabel = 'number_tasks'
 
 precision_dev = torch.zeros(SETTINGS["TASK_NUMBER"], dim_y)
@@ -168,57 +168,43 @@ dev_loader = torch.utils.data.DataLoader(dev_dataset, shuffle=False, batch_size=
 test_loader = torch.utils.data.DataLoader(test_dataset, shuffle=False, batch_size=SETTINGS["BATCH_SIZE"],  drop_last=True)
 
 for cnt, value in tqdm(enumerate(VAR_TEST)):
-    if SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-        n_tasks = value
     for j in range(SETTINGS["ITERATIONS"]):
         print('{} = {}.'.format(SETTINGS["TEST_TYPE"], value))
         logger.info('{} = {}.'.format(SETTINGS["TEST_TYPE"], value))
-		
+
         # Create model
         if SETTINGS["MODEL_NAME"] == "LSTM_3FCs":
             myModel = LSTM_3FCs.Net(input_size=SETTINGS["EMBEDDING_DIM"], hidden_size=SETTINGS["HIDDEN_SIZE"], output_size=SETTINGS["OUTPUT_SIZE"],
-                                    num_tasks= n_tasks, batch_size=SETTINGS["BATCH_SIZE"])
+                                    num_tasks=SETTINGS["TASK_NUMBER"], batch_size=SETTINGS["BATCH_SIZE"])
         elif SETTINGS["MODEL_NAME"] == "LSTM_2FCs":
             myModel = LSTM_2FCs.Net(input_size=SETTINGS["EMBEDDING_DIM"], hidden_size=SETTINGS["HIDDEN_SIZE"], output_size=SETTINGS["OUTPUT_SIZE"],
-                                    num_tasks= n_tasks, batch_size=SETTINGS["BATCH_SIZE"])
+                                    num_tasks=SETTINGS["TASK_NUMBER"], batch_size=SETTINGS["BATCH_SIZE"])
         elif SETTINGS["MODEL_NAME"] == "LSTM_1FCs":
             myModel = LSTM_1FCs.Net(input_size=SETTINGS["EMBEDDING_DIM"], hidden_size=SETTINGS["HIDDEN_SIZE"], output_size=SETTINGS["OUTPUT_SIZE"],
-                                    num_tasks= n_tasks, batch_size=SETTINGS["BATCH_SIZE"])
-        elif SETTINGS["MODEL_NAME"] == "LSTM_0FCs":
-            myModel = LSTM_0FCs.Net(input_size=SETTINGS["EMBEDDING_DIM"], hidden_size=SETTINGS["HIDDEN_SIZE"], output_size=SETTINGS["OUTPUT_SIZE"],
-                                    num_tasks= n_tasks, batch_size=SETTINGS["BATCH_SIZE"])
+                                    num_tasks=SETTINGS["TASK_NUMBER"], batch_size=SETTINGS["BATCH_SIZE"])
 
         optimizer = torch.optim.Adam(myModel.parameters())
         criterion = nn.CrossEntropyLoss()
         myModel.to(DEVICE)
 
         start = 0
-        if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS": #CHANGED
-            n_tokens = value
-        elif SETTINGS["TEST_TYPE"] == "TASK_CORRELATION" or SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-            n_tokens = SETTINGS["NUMBER_TOKENS"]
+        if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS":
+            end = value
 
-        end = n_tokens
         train_datasets = []
-        for k in range(n_tasks): #CHANGED
-            if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS": #CHANGED
-                y_training = train_y[start:end]
-            elif SETTINGS["TEST_TYPE"] == "TASK_CORRELATION":
-                y_training = train_y[start:end, [0, cnt+1]]
-            elif SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-                y_training = train_y[start:end, 0:n_tasks]
-            train_datasets.append(utilities.SequenceLabelingDataset(train_x[start:end], y_training, n_tokens, k))
-            start += n_tokens #CHANGED
-            end += n_tokens
+        for k in range(SETTINGS["TASK_NUMBER"]):
+            train_datasets.append(utilities.SequenceLabelingDataset(train_x[start:end], train_y[start:end], value, k))
+            start += value
+            end += value
 
         train_loaders = []
-        for k in range(n_tasks):
+        for k in range(SETTINGS["TASK_NUMBER"]):
             train_loaders.append(
-                torch.utils.data.DataLoader(train_datasets[k], shuffle=True, batch_size=SETTINGS["BATCH_SIZE"], drop_last=True))
-				
+                torch.utils.data.DataLoader(train_datasets[k], shuffle=True, batch_size=SETTINGS["BATCH_SIZE"],
+                                            drop_last=True))
         myModel.train()
         for epoch in tqdm(range(SETTINGS["EPOCHS"])):
-            for idx_loader in range(n_tasks):
+            for idx_loader in range(SETTINGS["TASK_NUMBER"]):
                 for i, (inputs, labels) in enumerate(train_loaders[idx_loader]):
                     loss = 0
                     # 1. Clear gradients w.r.t. parameters
@@ -241,13 +227,13 @@ for cnt, value in tqdm(enumerate(VAR_TEST)):
                     optimizer.step()
 
         myModel.eval()
-        dev_pred_labels = [[] for i in range(n_tasks)] #CHANGED
-        test_pred_labels = [[] for i in range(n_tasks)] #CHANGED
+        dev_pred_labels = [[] for i in range(SETTINGS["TASK_NUMBER"])]
+        test_pred_labels = [[] for i in range(SETTINGS["TASK_NUMBER"])]
 
-        dev_pred = utilities.predict(myModel, dev_loader, seq_size, SETTINGS["EMBEDDING_DIM"], DEVICE, n_tasks) #CHANGED
+        dev_pred = utilities.predict(myModel, dev_loader, seq_size, SETTINGS["EMBEDDING_DIM"], DEVICE,  SETTINGS["TASK_NUMBER"])
 
         lb = []
-        for k in range(n_tasks):
+        for k in range(0, SETTINGS["TASK_NUMBER"]):
             lb.append(utilities.LabelRepresentation())
             if k == 0:
                 if SETTINGS["TAGGING_SCHEME_DEV"] == "BIO" or SETTINGS["TAGGING_SCHEME_DEV"] == "IO":
@@ -260,19 +246,12 @@ for cnt, value in tqdm(enumerate(VAR_TEST)):
                 if SETTINGS["TAGGING_SCHEME_DEV"] == "BINARY":
                     lb[k].use_synthetic_binary_labels()
 
-        for k in range(n_tasks): #CHANGED
+        for k in range(0, SETTINGS["TASK_NUMBER"]):
             for pred in dev_pred[k]:
                 dev_pred_labels[k].append(lb[k].idx_to_label((pred.item())))
             dev_pred_labels[k] = lb[k].convert_noprefix_to_bio_labels(dev_pred_labels[k])
             evaluation = utilities.Evaluation()
-            if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS" or SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-                index_string = k
-            elif SETTINGS["TEST_TYPE"] == "TASK_CORRELATION":
-                if k == 0: #Changed
-                    index_string = 0
-                else:
-                    index_string = cnt+1
-            conll_evaluation_string = evaluation.create_conlleval_string(dev, dev_pred_labels[k], idx_label= index_string) #Changed
+            conll_evaluation_string = evaluation.create_conlleval_string(dev, dev_pred_labels[k], idx_label=k)
             overall_dev, per_label_dev, full_report_dev = evaluation.evaluate_conlleval_string(conll_evaluation_string)
             logger.info("Task {}".format(k))
             logger.info("Dev")
@@ -281,21 +260,13 @@ for cnt, value in tqdm(enumerate(VAR_TEST)):
             temp_recall_dev[k, j] = overall_dev.rec
             temp_fscore_dev[k, j] = overall_dev.fscore
 
-        test_pred = utilities.predict(myModel, test_loader, seq_size, SETTINGS["EMBEDDING_DIM"], DEVICE, n_tasks) #Changed
-		
-        for k in range(n_tasks):#Changed
+        test_pred = utilities.predict(myModel, test_loader, seq_size, SETTINGS["EMBEDDING_DIM"], DEVICE, SETTINGS["TASK_NUMBER"])
+        for k in range(0, SETTINGS["TASK_NUMBER"]):
             for pred in test_pred[k]:
                 test_pred_labels[k].append(lb[k].idx_to_label((pred.item())))
             test_pred_labels[k] = lb[k].convert_noprefix_to_bio_labels(test_pred_labels[k])
             evaluation = utilities.Evaluation()
-            if SETTINGS["TEST_TYPE"] == "NUMBER_TOKENS" or SETTINGS["TEST_TYPE"] == "TASK_NUMBER":
-                index_string = k
-            elif SETTINGS["TEST_TYPE"] == "TASK_CORRELATION":
-                if k == 0: #Changed
-                    index_string = 0
-                else:
-                    index_string = cnt+1
-            conll_evaluation_string = evaluation.create_conlleval_string(test, test_pred_labels[k], idx_label=index_string)
+            conll_evaluation_string = evaluation.create_conlleval_string(test, test_pred_labels[k], idx_label=k)
             overall_test, per_label_test, full_report_test = evaluation.evaluate_conlleval_string(
                 conll_evaluation_string)
             logger.info("Test")
@@ -304,8 +275,7 @@ for cnt, value in tqdm(enumerate(VAR_TEST)):
             temp_recall_test[k, j] = overall_test.rec
             temp_fscore_test[k, j] = overall_test.fscore
         del myModel
-		
-    for k in range(n_tasks): #CHANGED
+    for k in range(0, SETTINGS["TASK_NUMBER"]):
         precision_dev[k, cnt] = temp_precision_dev[k].mean()
         recall_dev[k, cnt] = temp_recall_dev[k].mean()
         fscore_dev[k, cnt] = temp_fscore_dev[k].mean()
@@ -322,7 +292,7 @@ for cnt, value in tqdm(enumerate(VAR_TEST)):
         recall_test_sd[k, cnt] = temp_recall_test[k].std()
         fscore_test_sd[k, cnt] = temp_fscore_test[k].std()
 
-for k in range(n_tasks):
+for k in range(0, SETTINGS["TASK_NUMBER"]):
     print("\nTask {}".format(k))
     print("\nDevelopment set")
     print('Prec: {}\nRecall: {}\nFscore: {}'.format(precision_dev[k], recall_dev[k], fscore_dev[k]))

@@ -62,7 +62,7 @@ The values for each key of the JSON files should have the following values: \
 python main.py
 
 #For training and evaluating the symbolic regressors
-python notebook
+jupyter notebook
 #search for the files and run the notebook
 
 ```

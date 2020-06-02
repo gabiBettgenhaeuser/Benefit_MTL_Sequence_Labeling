@@ -1,7 +1,3 @@
-Learning Functions to Study the Benefit of Multitask Learning (NeurIPS 2020)
-
-Code and data for the experiments of Section 5 for the task simulator, training and evaluation of the MTL models and training and evaluation of the symbolic regressors. 
-
 ## Structure of Supplementary Material
 This repository has the following structure:
 
@@ -14,7 +10,7 @@ This repository has the following structure:
 6. Symbolic Regression_Balanced Datasets.ipynb; Symbolic Regression_Unbalanced Datasets.ipynb: notebooks with the experimental pipeline for applying symbolic regression. 
 
 * Data
-1. conll2003: Named Entity Recognition dataset base for Task Simulator and for fitting/evaluating MTL models.
+1. conll2003: Named Entity Recognition dataset base for Task Simulator and for fitting/evaluating MTL models. Should be obtained from the authors.
 2. MTL Balanced Datasets.csv; MTL Unbalanced Datasets.csv: generated data to fit the symbolic regressors.
 
 ## Installation
@@ -29,32 +25,32 @@ pip install torch==1.4.0 gplearn==0.4.1 matplotlib==3.1.1 tqdm==4.41.1 numpy==1.
 ## Running
 
 * Config Files:
-The values for each key of the JSON files should have the following values:
+The values for each key of the JSON files should have the following values: \
 {
-	"NAME": if the name of the JSON file is XXX.json, then "XXX"  should be the value of "NAME".
-	"MODEL_NAME": one of the options in {"LSTM_0FCs", "LSTM_1FCs", "LSTM_2FCs", "LSTM_3FCs"}.
-	"TEST_TYPE": one of the options in {"TASK_NUMBER", "TASK_CORRELATION", "NUMBER_TOKENS"}.
+	"NAME": if the name of the JSON file is XXX.json, then "XXX"  should be the value of "NAME" \
+	"MODEL_NAME": one of the options in {"LSTM_0FCs", "LSTM_1FCs", "LSTM_2FCs", "LSTM_3FCs"} \
+	"TEST_TYPE": one of the options in {"TASK_NUMBER", "TASK_CORRELATION", "NUMBER_TOKENS"} \
 	"EMBEDDING": one of the options in {"FASTTEXT", "GLOVE"},
-	"LOG_PATH": "/path/to/log"
-	"PLOT_SCORES_PATH": "/path/to/plot.png"
-	"PLOT_LABELCOOCURRENCE_PATH": "/path/to/ploy2"
-	"PATH_TRAIN": "/path/to/train-data"
-	"PATH_DEV": "/path/to/dev-data"
-	"PATH_TEST": "/path/to/dev-data"
-	"PATH_FASTTEXT": "/path/to/emb"
-	"PATH_GLOVE": "/path/to/emb"
-	"CONTEXT_SIZE": int
-	"EMBEDDING_DIM": int
-	"HIDDEN_SIZE": int
-	"BATCH_SIZE": int
-	"EPOCHS": int
-	"OUTPUT_SIZE": int 
-	"TASK_NUMBER": int
-	"NUMBER_TOKENS": int
-	"ALPHA": int
-	"ITERATIONS": int
-	"TAGGING_SCHEME_TRAIN": one of the options in {"IO", "BIO", "BINARY"}.
-	"TAGGING_SCHEME_DEV": one of the options in {"IO", "BIO", "BINARY"}.
+	"LOG_PATH": "/path/to/log" \
+	"PLOT_SCORES_PATH": "/path/to/plot.png" \
+	"PLOT_LABELCOOCURRENCE_PATH": "/path/to/ploy2" \
+	"PATH_TRAIN": "/path/to/train-data" \
+	"PATH_DEV": "/path/to/dev-data" \
+	"PATH_TEST": "/path/to/dev-data" \
+	"PATH_FASTTEXT": "/path/to/emb" \
+	"PATH_GLOVE": "/path/to/emb" \
+	"CONTEXT_SIZE": int \
+	"EMBEDDING_DIM": int \
+	"HIDDEN_SIZE": int \
+	"BATCH_SIZE": int \
+	"EPOCHS": int \
+	"OUTPUT_SIZE": int \
+	"TASK_NUMBER": int \
+	"NUMBER_TOKENS": int \
+	"ALPHA": int \
+	"ITERATIONS": int \
+	"TAGGING_SCHEME_TRAIN": one of the options in {"IO", "BIO", "BINARY"} \
+	"TAGGING_SCHEME_DEV": one of the options in {"IO", "BIO", "BINARY"} \
 	"TAGGING_SCHEME_TEST": one of the options in {"IO", "BIO", "BINARY"}.	
 }
 
